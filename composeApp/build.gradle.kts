@@ -9,11 +9,6 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-        vendor.set(JvmVendorSpec.AMAZON)
-    }
-
     jvm()
 
     sourceSets {

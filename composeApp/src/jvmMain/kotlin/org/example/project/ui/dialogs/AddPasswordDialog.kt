@@ -23,17 +23,28 @@ import org.example.project.ui.components.InputLabel
 import org.example.project.ui.components.SimpleInput
 import org.example.project.ui.components.TabButton
 import org.example.project.ui.theme.PrimaryColor
+import org.example.project.utils.SecurityUtils
 
 @Composable
-fun AddPasswordDialog(onDismiss: () -> Unit, onSave: (PasswordEntry) -> Unit) {
+fun PasswordDialog(
+    onDismiss: () -> Unit,
+    onSave: (PasswordEntry) -> Unit,
+    existingEntry: PasswordEntry? = null,
+    masterPassword: String
+) {
     var selectedTab by remember { mutableStateOf(0) }
 
-    var name by remember { mutableStateOf("") }
-    var login by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var url by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(existingEntry?.name ?: "") }
+    var login by remember { mutableStateOf(existingEntry?.login ?: "") }
+    var url by remember { mutableStateOf(existingEntry?.url ?: "") }
 
-    // Generator State
+    var password by remember {
+        mutableStateOf(
+            if (existingEntry != null) SecurityUtils.decrypt(existingEntry.passwordEncrypted, masterPassword)
+            else ""
+        )
+    }
+
     var passLength by remember { mutableStateOf(16f) }
     var useUpper by remember { mutableStateOf(true) }
     var useLower by remember { mutableStateOf(true) }
@@ -48,7 +59,11 @@ fun AddPasswordDialog(onDismiss: () -> Unit, onSave: (PasswordEntry) -> Unit) {
         ) {
             Column(Modifier.padding(24.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Добавить новый пароль", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (existingEntry == null) "Добавить новый пароль" else "Редактировать пароль",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                     IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
                 }
                 Text("Заполните информацию о записи пароля", color = Color.Gray)
@@ -126,7 +141,14 @@ fun AddPasswordDialog(onDismiss: () -> Unit, onSave: (PasswordEntry) -> Unit) {
                     OutlinedButton(onClick = onDismiss, modifier = Modifier.height(40.dp)) { Text("Отмена") }
                     Spacer(Modifier.width(12.dp))
                     Button(
-                        onClick = { onSave(PasswordEntry(name = name, login = login, passwordEncrypted = password, url = url)) },
+                        onClick = {
+                            val entryToSave = if (existingEntry != null) {
+                                existingEntry.copy(name = name, login = login, passwordEncrypted = password, url = url)
+                            } else {
+                                PasswordEntry(name = name, login = login, passwordEncrypted = password, url = url)
+                            }
+                            onSave(entryToSave)
+                        },
                         modifier = Modifier.height(40.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B7280))
                     ) {

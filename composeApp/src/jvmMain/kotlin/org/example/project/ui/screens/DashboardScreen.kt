@@ -20,7 +20,7 @@ import org.example.project.model.PasswordEntry
 import org.example.project.ui.components.PasswordCard
 import org.example.project.ui.components.SidebarItem
 import org.example.project.ui.components.TagChip
-import org.example.project.ui.dialogs.AddPasswordDialog
+import org.example.project.ui.dialogs.PasswordDialog
 import org.example.project.ui.dialogs.ImportExportDialog
 import org.example.project.ui.theme.AccentColor
 import org.example.project.ui.theme.BgColor
@@ -35,10 +35,11 @@ fun DashboardScreen(
     onLogout: () -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var entryToEdit by remember { mutableStateOf<PasswordEntry?>(null) }
+
     var showImportExportDialog by remember { mutableStateOf(false) }
 
     Row(modifier = Modifier.fillMaxSize().background(BgColor)) {
-        // Sidebar
         Column(
             modifier = Modifier.width(250.dp).fillMaxHeight().background(Color.White).padding(16.dp)
         ) {
@@ -114,19 +115,41 @@ fun DashboardScreen(
             // List
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(passwords) { entry ->
-                    PasswordCard(entry, masterPassword)
+                    PasswordCard(
+                        entry = entry,
+                        masterPassword = masterPassword,
+                        onEdit = { entryToEdit = entry },
+                        onDelete = { passwords.remove(entry) }
+                    )
                 }
             }
         }
     }
 
     if (showAddDialog) {
-        AddPasswordDialog(
+        PasswordDialog(
+            masterPassword = masterPassword,
             onDismiss = { showAddDialog = false },
             onSave = { newEntry ->
                 val encryptedEntry = newEntry.copy(passwordEncrypted = SecurityUtils.encrypt(newEntry.passwordEncrypted, masterPassword))
                 passwords.add(encryptedEntry)
                 showAddDialog = false
+            }
+        )
+    }
+
+    if (entryToEdit != null) {
+        PasswordDialog(
+            existingEntry = entryToEdit,
+            masterPassword = masterPassword,
+            onDismiss = { entryToEdit = null },
+            onSave = { updatedEntry ->
+                val index = passwords.indexOfFirst { it.id == updatedEntry.id }
+                if (index != -1) {
+                    val encryptedEntry = updatedEntry.copy(passwordEncrypted = SecurityUtils.encrypt(updatedEntry.passwordEncrypted, masterPassword))
+                    passwords[index] = encryptedEntry
+                }
+                entryToEdit = null
             }
         )
     }

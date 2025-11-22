@@ -20,7 +20,12 @@ import org.example.project.ui.theme.WeakColor
 import org.example.project.utils.SecurityUtils
 
 @Composable
-fun PasswordCard(entry: PasswordEntry, masterPassword: String) {
+fun PasswordCard(
+    entry: PasswordEntry,
+    masterPassword: String,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     var isPasswordVisible by remember { mutableStateOf(false) }
     val decryptedPassword = remember(entry.passwordEncrypted, masterPassword) {
         SecurityUtils.decrypt(entry.passwordEncrypted, masterPassword)
@@ -62,8 +67,8 @@ fun PasswordCard(entry: PasswordEntry, masterPassword: String) {
                 }
 
                 Row {
-                    IconButton(onClick = {}) { Icon(Icons.Default.Edit, null, tint = Color.Gray) }
-                    IconButton(onClick = {}) { Icon(Icons.Default.Delete, null, tint = Color(0xFFEF4444)) }
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, null, tint = Color.Gray) }
+                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, null, tint = Color(0xFFEF4444)) }
                 }
             }
 
