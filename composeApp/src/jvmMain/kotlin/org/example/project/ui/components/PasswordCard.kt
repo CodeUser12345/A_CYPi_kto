@@ -10,14 +10,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.example.project.model.PasswordEntry
 import org.example.project.ui.theme.AccentColor
 import org.example.project.ui.theme.WeakColor
 import org.example.project.utils.SecurityUtils
+import java.awt.datatransfer.StringSelection
 
 @Composable
 fun PasswordCard(
@@ -27,11 +31,17 @@ fun PasswordCard(
     onDelete: () -> Unit
 ) {
     var isPasswordVisible by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val decryptedPassword = remember(entry.passwordEncrypted, masterPassword) {
         SecurityUtils.decrypt(entry.passwordEncrypted, masterPassword)
     }
 
-    Card(shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
@@ -39,29 +49,65 @@ fun PasswordCard(
                     Spacer(Modifier.height(12.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Логин: ", color = Color.Gray, modifier = Modifier.width(60.dp))
+                        Text("Логин: ", color = Color.Gray, modifier = Modifier.width(75.dp))
+
                         Box(Modifier.background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp)).padding(4.dp)) {
                             Text(entry.login, fontFamily = FontFamily.Monospace)
+                        }
+
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    val selection = StringSelection(entry.login)
+                                    clipboard.setClipEntry(ClipEntry(selection))
+                                }
+                            },
+                            modifier = Modifier.size(32.dp).padding(start = 4.dp)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Пароль: ", color = Color.Gray, modifier = Modifier.width(60.dp))
+                        Text("Пароль: ", color = Color.Gray, modifier = Modifier.width(75.dp))
+
                         Box(Modifier.background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp)).padding(4.dp)) {
                             Text(
                                 if (isPasswordVisible) decryptedPassword else "••••••••••••",
                                 fontFamily = FontFamily.Monospace
                             )
                         }
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }, modifier = Modifier.size(24.dp)) {
-                            Icon(if(isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null, tint = Color.Gray)
+
+                        IconButton(
+                            onClick = { isPasswordVisible = !isPasswordVisible },
+                            modifier = Modifier.size(32.dp).padding(start = 4.dp)
+                        ) {
+                            Icon(
+                                if(isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    val selection = StringSelection(decryptedPassword)
+                                    clipboard.setClipEntry(ClipEntry(selection))
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                         }
                     }
 
                     Spacer(Modifier.height(8.dp))
-                    Row {
-                        Text("URL: ", color = Color.Gray, modifier = Modifier.width(60.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("URL: ", color = Color.Gray, modifier = Modifier.width(75.dp))
                         Text(entry.url, color = AccentColor)
                     }
                 }
