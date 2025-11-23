@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +28,7 @@ import org.example.project.ui.dialogs.ImportExportDialog
 import org.example.project.ui.theme.AccentColor
 import org.example.project.ui.theme.BgColor
 import org.example.project.ui.theme.PrimaryColor
+import org.example.project.ui.theme.TextColor
 import org.example.project.ui.theme.WeakColor
 import org.example.project.utils.SecurityUtils
 
@@ -36,8 +40,15 @@ fun DashboardScreen(
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var entryToEdit by remember { mutableStateOf<PasswordEntry?>(null) }
-
     var showImportExportDialog by remember { mutableStateOf(false) }
+
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredPasswords = passwords.filter {
+        it.name.contains(searchQuery, ignoreCase = true) ||
+                it.login.contains(searchQuery, ignoreCase = true) ||
+                it.url.contains(searchQuery, ignoreCase = true)
+    }
 
     Row(modifier = Modifier.fillMaxSize().background(BgColor)) {
         Column(
@@ -92,7 +103,21 @@ fun DashboardScreen(
             ) {
                 Icon(Icons.Default.Search, null, tint = Color.Gray)
                 Spacer(Modifier.width(8.dp))
-                Text("Поиск по названию, логину или URL...", color = Color.Gray, modifier = Modifier.weight(1f))
+
+                // 3. Поле поиска вместо простого текста
+                Box(modifier = Modifier.weight(1f)) {
+                    if (searchQuery.isEmpty()) {
+                        Text("Поиск по названию, логину или URL...", color = Color.Gray)
+                    }
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        textStyle = TextStyle(color = TextColor, fontSize = 16.sp),
+                        cursorBrush = SolidColor(AccentColor),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
 
                 OutlinedButton(onClick = { showImportExportDialog = true }) {
                     Icon(Icons.Default.ImportExport, null, modifier = Modifier.size(18.dp))
@@ -112,9 +137,8 @@ fun DashboardScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // List
             LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(passwords) { entry ->
+                items(filteredPasswords) { entry ->
                     PasswordCard(
                         entry = entry,
                         masterPassword = masterPassword,
