@@ -2,6 +2,7 @@ package org.example.project.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -32,6 +34,7 @@ import org.example.project.ui.theme.TextColor
 import org.example.project.ui.theme.WeakColor
 import org.example.project.utils.SecurityUtils
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
     passwords: MutableList<PasswordEntry>,
@@ -43,11 +46,23 @@ fun DashboardScreen(
     var showImportExportDialog by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
 
-    val filteredPasswords = passwords.filter {
-        it.name.contains(searchQuery, ignoreCase = true) ||
-                it.login.contains(searchQuery, ignoreCase = true) ||
-                it.url.contains(searchQuery, ignoreCase = true)
+    val allTags = remember(passwords.toList()) {
+        passwords.flatMap { it.tags }.toSet().sorted()
+    }
+
+    val filteredPasswords = passwords.filter { entry ->
+        val matchesSearch = entry.name.contains(searchQuery, ignoreCase = true) ||
+                entry.login.contains(searchQuery, ignoreCase = true) ||
+                entry.url.contains(searchQuery, ignoreCase = true)
+
+        val matchesTag = selectedTag == null || entry.tags.contains(selectedTag)
+
+        val matchesFolder = selectedFolder == null || entry.folder == selectedFolder
+
+        matchesSearch && matchesTag && matchesFolder
     }
 
     Row(modifier = Modifier.fillMaxSize().background(BgColor)) {
@@ -67,15 +82,51 @@ fun DashboardScreen(
             Spacer(Modifier.height(32.dp))
 
             Text("Папки", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
-            SidebarItem("Все (${passwords.size})", true)
-            SidebarItem("Основная", false)
-            SidebarItem("Работа", false)
-            SidebarItem("Финансы", false)
+
+            Box(modifier = Modifier.clickable { selectedFolder = null }) {
+                SidebarItem("Все (${passwords.size})", selectedFolder == null)
+            }
+            Box(modifier = Modifier.clickable { selectedFolder = "Основная" }) {
+                SidebarItem("Основная", selectedFolder == "Основная")
+            }
+            Box(modifier = Modifier.clickable { selectedFolder = "Работа" }) {
+                SidebarItem("Работа", selectedFolder == "Работа")
+            }
+            Box(modifier = Modifier.clickable { selectedFolder = "Финансы" }) {
+                SidebarItem("Финансы", selectedFolder == "Финансы")
+            }
 
             Spacer(Modifier.height(24.dp))
-            Text("Теги", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
-            Row(modifier = Modifier.wrapContentWidth()) {
-                TagChip("важное", Color.Black, Color.White)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text("Теги", fontWeight = FontWeight.SemiBold)
+                if (selectedTag != null) {
+                    IconButton(onClick = { selectedTag = null }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Close, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                allTags.forEach { tag ->
+                    val isSelected = tag == selectedTag
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { selectedTag = if (isSelected) null else tag }
+                    ) {
+                        TagChip(
+                            text = tag,
+                            bg = if (isSelected) Color.Black else Color(0xFFF3F4F6),
+                            content = if (isSelected) Color.White else Color.Black
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.weight(1f))
@@ -94,9 +145,7 @@ fun DashboardScreen(
             }
         }
 
-        // Main Content
         Column(modifier = Modifier.weight(1f).padding(24.dp)) {
-            // Top Bar
             Row(
                 modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(8.dp)).padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -104,7 +153,6 @@ fun DashboardScreen(
                 Icon(Icons.Default.Search, null, tint = Color.Gray)
                 Spacer(Modifier.width(8.dp))
 
-                // 3. Поле поиска вместо простого текста
                 Box(modifier = Modifier.weight(1f)) {
                     if (searchQuery.isEmpty()) {
                         Text("Поиск по названию, логину или URL...", color = Color.Gray)

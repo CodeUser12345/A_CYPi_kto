@@ -16,7 +16,9 @@ import org.example.project.ui.theme.PrimaryColor
 
 @Composable
 fun TagChip(text: String, bg: Color = Color(0xFFF3F4F6), content: Color = Color.Black) {
-    Box(modifier = Modifier.padding(end = 8.dp).background(bg, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp)) {
+    Box(modifier = Modifier
+        .background(bg, RoundedCornerShape(16.dp))
+        .padding(horizontal = 12.dp, vertical = 4.dp)) {
         Text(text, fontSize = 12.sp, color = content)
     }
 }

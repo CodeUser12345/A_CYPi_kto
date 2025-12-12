@@ -119,10 +119,12 @@ fun PasswordCard(
             }
 
             Spacer(Modifier.height(16.dp))
-            Row {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 entry.tags.forEach { TagChip(it) }
                 if(entry.isWeak) {
-                    Spacer(Modifier.width(8.dp))
+                    if (entry.tags.isNotEmpty()) {
+                    }
+
                     Box(Modifier.background(WeakColor, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 4.dp)) {
                         Text("Слабый", color = Color.White, fontSize = 12.sp)
                     }
