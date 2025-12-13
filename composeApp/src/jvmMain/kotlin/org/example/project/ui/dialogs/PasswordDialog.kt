@@ -90,7 +90,7 @@ fun PasswordDialog(
                 if (selectedTab == 0) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         InputLabel("Название *")
-                        SimpleInput(name, "Например: Gmail") { name = it }
+                        SimpleInput(name, "Например, Gmail") { name = it }
 
                         InputLabel("Имя пользователя / Email")
                         SimpleInput(login, "user@example.com") { login = it }
@@ -126,20 +126,12 @@ fun PasswordDialog(
                                 }
                             )
                         }
+
                         if (tags.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 tags.forEach { tag ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .clickable {
-                                                tags = tags - tag
-                                            }
-                                    ) {
+                                    Box(modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { tags = tags - tag }) {
                                         TagChip(text = "$tag ×", bg = Color(0xFFE5E7EB))
                                     }
                                 }
@@ -149,19 +141,12 @@ fun PasswordDialog(
                 } else {
                     Column(Modifier.weight(1f)) {
                         Text("Длина пароля: ${passLength.toInt()}")
-                        Slider(
-                            value = passLength,
-                            onValueChange = { passLength = it },
-                            valueRange = 8f..32f,
-                            colors = SliderDefaults.colors(thumbColor = PrimaryColor, activeTrackColor = PrimaryColor)
-                        )
-
+                        Slider(value = passLength, onValueChange = { passLength = it }, valueRange = 8f..32f, colors = SliderDefaults.colors(thumbColor = PrimaryColor, activeTrackColor = PrimaryColor))
                         Spacer(Modifier.height(16.dp))
                         CheckOption("Заглавные буквы (A-Z)", useUpper) { useUpper = it }
                         CheckOption("Строчные буквы (a-z)", useLower) { useLower = it }
                         CheckOption("Цифры (0-9)", useDigits) { useDigits = it }
                         CheckOption("Специальные символы (!@#$%)", useSymbols) { useSymbols = it }
-
                         Spacer(Modifier.height(24.dp))
                         Button(
                             onClick = {
@@ -178,11 +163,8 @@ fun PasswordDialog(
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
                         ) {
-                            Icon(Icons.Default.Refresh, null, tint = Color.White)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Сгенерировать пароль", color = Color.White)
+                            Icon(Icons.Default.Refresh, null, tint = Color.White); Spacer(Modifier.width(8.dp)); Text("Сгенерировать пароль", color = Color.White)
                         }
-
                         Spacer(Modifier.height(16.dp))
                         if (password.isNotEmpty()) {
                             Box(Modifier.fillMaxWidth().background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp)).padding(16.dp)) {
