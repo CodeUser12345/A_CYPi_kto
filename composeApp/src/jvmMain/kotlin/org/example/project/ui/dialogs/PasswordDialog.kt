@@ -1,16 +1,20 @@
 package org.example.project.ui.dialogs
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -22,9 +26,12 @@ import org.example.project.ui.components.CheckOption
 import org.example.project.ui.components.InputLabel
 import org.example.project.ui.components.SimpleInput
 import org.example.project.ui.components.TabButton
+import org.example.project.ui.components.TagChip
+import org.example.project.ui.theme.AccentColor
 import org.example.project.ui.theme.PrimaryColor
 import org.example.project.utils.SecurityUtils
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PasswordDialog(
     onDismiss: () -> Unit,
@@ -37,6 +44,9 @@ fun PasswordDialog(
     var name by remember { mutableStateOf(existingEntry?.name ?: "") }
     var login by remember { mutableStateOf(existingEntry?.login ?: "") }
     var url by remember { mutableStateOf(existingEntry?.url ?: "") }
+
+    var tags by remember { mutableStateOf(existingEntry?.tags ?: emptyList()) }
+    var tagInput by remember { mutableStateOf("") }
 
     var password by remember {
         mutableStateOf(
@@ -53,7 +63,7 @@ fun PasswordDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = Modifier.width(600.dp).height(700.dp),
+            modifier = Modifier.width(600.dp).height(750.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
@@ -80,7 +90,7 @@ fun PasswordDialog(
                 if (selectedTab == 0) {
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         InputLabel("Название *")
-                        SimpleInput(name, "Например, Gmail") { name = it }
+                        SimpleInput(name, "Например: Gmail") { name = it }
 
                         InputLabel("Имя пользователя / Email")
                         SimpleInput(login, "user@example.com") { login = it }
@@ -90,6 +100,51 @@ fun PasswordDialog(
 
                         InputLabel("URL / Веб-сайт")
                         SimpleInput(url, "https://example.com") { url = it }
+
+                        InputLabel("Теги")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = tagInput,
+                                onValueChange = { tagInput = it },
+                                placeholder = { Text("Например: работа", color = Color.LightGray) },
+                                modifier = Modifier.weight(1f).background(Color(0xFFF9FAFB)),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = AccentColor,
+                                    unfocusedBorderColor = Color.Transparent
+                                ),
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        if (tagInput.isNotBlank() && !tags.contains(tagInput.trim())) {
+                                            tags = tags + tagInput.trim()
+                                            tagInput = ""
+                                        }
+                                    }) {
+                                        Icon(Icons.Default.Add, null, tint = AccentColor)
+                                    }
+                                }
+                            )
+                        }
+                        if (tags.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                tags.forEach { tag ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .clickable {
+                                                tags = tags - tag
+                                            }
+                                    ) {
+                                        TagChip(text = "$tag ×", bg = Color(0xFFE5E7EB))
+                                    }
+                                }
+                            }
+                        }
                     }
                 } else {
                     Column(Modifier.weight(1f)) {
@@ -143,9 +198,9 @@ fun PasswordDialog(
                     Button(
                         onClick = {
                             val entryToSave = if (existingEntry != null) {
-                                existingEntry.copy(name = name, login = login, passwordEncrypted = password, url = url)
+                                existingEntry.copy(name = name, login = login, passwordEncrypted = password, url = url, tags = tags)
                             } else {
-                                PasswordEntry(name = name, login = login, passwordEncrypted = password, url = url)
+                                PasswordEntry(name = name, login = login, passwordEncrypted = password, url = url, tags = tags)
                             }
                             onSave(entryToSave)
                         },
