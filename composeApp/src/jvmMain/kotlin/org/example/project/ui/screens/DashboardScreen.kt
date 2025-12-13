@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,7 +60,6 @@ fun DashboardScreen(
                 entry.url.contains(searchQuery, ignoreCase = true)
 
         val matchesTag = selectedTag == null || entry.tags.contains(selectedTag)
-
         val matchesFolder = selectedFolder == null || entry.folder == selectedFolder
 
         matchesSearch && matchesTag && matchesFolder
@@ -82,7 +82,6 @@ fun DashboardScreen(
             Spacer(Modifier.height(32.dp))
 
             Text("Папки", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
-
             Box(modifier = Modifier.clickable { selectedFolder = null }) {
                 SidebarItem("Все (${passwords.size})", selectedFolder == null)
             }
@@ -97,6 +96,7 @@ fun DashboardScreen(
             }
 
             Spacer(Modifier.height(24.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text("Теги", fontWeight = FontWeight.SemiBold)
                 if (selectedTag != null) {
@@ -114,7 +114,6 @@ fun DashboardScreen(
             ) {
                 allTags.forEach { tag ->
                     val isSelected = tag == selectedTag
-
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
@@ -142,6 +141,19 @@ fun DashboardScreen(
                         Text("Обнаружено слабых паролей.", fontSize = 12.sp, color = WeakColor, lineHeight = 14.sp)
                     }
                 }
+                Spacer(Modifier.height(16.dp))
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onLogout() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ExitToApp, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Выйти", color = TextColor, fontWeight = FontWeight.Medium)
             }
         }
 
