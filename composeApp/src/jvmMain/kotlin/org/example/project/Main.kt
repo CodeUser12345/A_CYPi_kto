@@ -39,6 +39,7 @@ fun App() {
     var screen by remember { mutableStateOf(ScreenState.LOGIN) }
     var masterPassword by remember { mutableStateOf("") }
     val initialPasswords = remember { mutableStateListOf<PasswordEntry>() }
+    val folders = remember { mutableStateListOf("Основная", "Работа", "Финансы") }
 
     when (screen) {
         ScreenState.LOGIN -> LoginScreen(
@@ -54,6 +55,7 @@ fun App() {
         )
         ScreenState.DASHBOARD -> DashboardScreen(
             passwords = initialPasswords,
+            folders = folders,
             masterPassword = masterPassword,
             onLogout = {
                 masterPassword = ""
