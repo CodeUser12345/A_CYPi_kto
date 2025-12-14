@@ -1,8 +1,9 @@
 package ui.dialogs
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,12 +17,11 @@ import ui.components.SimpleInput
 import ui.theme.PrimaryColor
 
 @Composable
-fun FolderDialog(
-    initialName: String = "",
+fun AddTagDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var folderName by remember { mutableStateOf(initialName) }
+    var tagName by remember { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -30,15 +30,18 @@ fun FolderDialog(
             colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
             Column(Modifier.padding(24.dp)) {
-                Text(
-                    text = if (initialName.isEmpty()) "Новая папка" else "Переименовать папку",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        text = "Новый тег",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, null) }
+                }
                 Spacer(Modifier.height(16.dp))
 
-                Text("Название папки", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
-                SimpleInput(folderName, "Например: Соцсети") { folderName = it }
+                Text("Название тега", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                SimpleInput(tagName, "Например: работа") { tagName = it }
 
                 Spacer(Modifier.height(24.dp))
 
@@ -46,10 +49,10 @@ fun FolderDialog(
                     OutlinedButton(onClick = onDismiss) { Text("Отмена") }
                     Spacer(Modifier.width(12.dp))
                     Button(
-                        onClick = { if (folderName.isNotBlank()) onConfirm(folderName) },
+                        onClick = { if (tagName.isNotBlank()) onConfirm(tagName) },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
                     ) {
-                        Text("Сохранить", color = Color.White)
+                        Text("Добавить", color = Color.White)
                     }
                 }
             }

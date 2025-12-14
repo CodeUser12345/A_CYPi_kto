@@ -28,7 +28,6 @@ fun main() = application {
     var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     val passwords = remember { mutableStateListOf<PasswordEntry>() }
-    val folders = remember { mutableStateListOf("Основная", "Работа", "Финансы") }
 
     // Загружаем сохраненные настройки при старте
     LaunchedEffect(Unit) {
@@ -38,9 +37,23 @@ fun main() = application {
         if (savedHash != null && savedSalt != null) {
             masterPasswordHash = savedHash
             masterPasswordSalt = savedSalt
-        } else {
-            // Первый запуск - создаем пустую базу
-            // Ничего не делаем, пользователь установит пароль
+        }
+
+        // Загружаем пароли из БД
+        passwords.clear()
+        passwords.addAll(DatabaseManager.getAllPasswords())
+
+        // ПЕРЕНЕСИ СУЩЕСТВУЮЩИЕ ТЕГИ В НОВУЮ ТАБЛИЦУ (делаем только один раз)
+        // Проверяем, была ли уже миграция
+        val migrationDone = DatabaseManager.getSetting("tags_migration_done")
+        if (migrationDone == null) {
+            // Миграция еще не делалась
+            val existingTags = passwords.flatMap { it.tags }.toSet()
+            existingTags.forEach { tag ->
+                DatabaseManager.saveTag(tag)
+            }
+            // Помечаем, что миграция сделана
+            DatabaseManager.saveSetting("tags_migration_done", "true")
         }
     }
 
@@ -48,25 +61,25 @@ fun main() = application {
     fun changeMasterPassword(oldPassword: String, newPassword: String) {
         try {
             // Перешифровываем все пароли новым паролем
-            val allPasswords = data.DatabaseManager.getAllPasswords()
+            val allPasswords = DatabaseManager.getAllPasswords()
             allPasswords.forEach { entry ->
                 val decrypted = SecurityUtils.decrypt(entry.passwordEncrypted, oldPassword)
                 val reencrypted = SecurityUtils.encrypt(decrypted, newPassword)
-                data.DatabaseManager.savePassword(entry.copy(passwordEncrypted = reencrypted))
+                DatabaseManager.savePassword(entry.copy(passwordEncrypted = reencrypted))
             }
 
             // Сохраняем новый хэш
             val (newHash, newSalt) = SecurityUtils.hashPassword(newPassword)
-            data.DatabaseManager.saveSetting("master_password_hash", newHash)
-            data.DatabaseManager.saveSetting("master_password_salt", newSalt)
+            DatabaseManager.saveSetting("master_password_hash", newHash)
+            DatabaseManager.saveSetting("master_password_salt", newSalt)
 
             masterPasswordHash = newHash
             masterPasswordSalt = newSalt
             masterPassword = newPassword
 
-            // ОБНОВЛЯЕМ список паролей из БД
+            // Обновляем список паролей
             passwords.clear()
-            passwords.addAll(data.DatabaseManager.getAllPasswords())
+            passwords.addAll(DatabaseManager.getAllPasswords())
         } catch (e: Exception) {
             println("Ошибка при смене пароля: ${e.message}")
         }
@@ -88,15 +101,15 @@ fun main() = application {
                     onLogin = { pass ->
                         masterPassword = pass
 
-                        // Если это первый запуск (нет сохраненного хэша)
                         if (masterPasswordHash == null) {
+                            // Первый запуск
                             val (hash, salt) = SecurityUtils.hashPassword(pass)
                             DatabaseManager.saveSetting("master_password_hash", hash)
                             DatabaseManager.saveSetting("master_password_salt", salt)
                             masterPasswordHash = hash
                             masterPasswordSalt = salt
 
-                            // Создаем демо-пароли для первого запуска
+                            // Создаем демо-пароли
                             val demoPasswords = listOf(
                                 PasswordEntry(
                                     name = "Gmail",
@@ -110,7 +123,6 @@ fun main() = application {
                                     login = "developer",
                                     passwordEncrypted = SecurityUtils.encrypt("SecureGitHub456#", pass),
                                     url = "https://github.com",
-                                    folder = "Работа",
                                     tags = listOf("разработка", "git")
                                 ),
                                 PasswordEntry(
@@ -118,7 +130,6 @@ fun main() = application {
                                     login = "ivan.ivanov",
                                     passwordEncrypted = SecurityUtils.encrypt("bank2024", pass),
                                     url = "https://online.bank.com",
-                                    folder = "Финансы",
                                     tags = listOf("банк", "финансы"),
                                     isWeak = true
                                 )
@@ -131,13 +142,6 @@ fun main() = application {
                         // Загружаем пароли из БД
                         passwords.clear()
                         passwords.addAll(DatabaseManager.getAllPasswords())
-
-                        // Загружаем папки из БД
-                        val dbFolders = DatabaseManager.getAllFolders()
-                        if (dbFolders.isNotEmpty()) {
-                            folders.clear()
-                            folders.addAll(dbFolders.distinct())
-                        }
 
                         screen = ScreenState.DASHBOARD
                     },
@@ -154,7 +158,6 @@ fun main() = application {
 
                 ScreenState.DASHBOARD -> DashboardScreen(
                     passwords = passwords,
-                    folders = folders,
                     masterPassword = masterPassword,
                     onLogout = {
                         masterPassword = ""

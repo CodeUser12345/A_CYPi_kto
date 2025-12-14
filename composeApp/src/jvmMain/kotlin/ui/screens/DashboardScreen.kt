@@ -1,17 +1,10 @@
 package ui.screens
 
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
@@ -19,33 +12,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.onPointerEvent
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import model.PasswordEntry
 import ui.components.PasswordCard
-import ui.components.SidebarItem
-import ui.components.TagChip
-import ui.dialogs.FolderDialog
-import ui.dialogs.PasswordDialog
 import ui.dialogs.ImportExportDialog
-import ui.dialogs.ChangeMasterPasswordDialog
+import ui.dialogs.PasswordDialog
+import ui.dialogs.AddTagDialog
 import ui.theme.AccentColor
 import ui.theme.BgColor
 import ui.theme.PrimaryColor
@@ -53,224 +32,262 @@ import ui.theme.TextColor
 import ui.theme.WeakColor
 import utils.SecurityUtils
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
     passwords: MutableList<PasswordEntry>,
-    folders: MutableList<String>,
     masterPassword: String,
     onLogout: () -> Unit,
-    onChangePassword: () -> Unit  // Добавили этот параметр
+    onChangePassword: () -> Unit
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var entryToEdit by remember { mutableStateOf<PasswordEntry?>(null) }
     var showImportExportDialog by remember { mutableStateOf(false) }
-    var showFolderDialog by remember { mutableStateOf(false) }
-    var folderToRename by remember { mutableStateOf<String?>(null) }
+    var showAddTagDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedTag by remember { mutableStateOf<String?>(null) }
-    var selectedFolder by remember { mutableStateOf<String?>(null) }
-
-    var draggedEntry by remember { mutableStateOf<PasswordEntry?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var draggedEntryInitialBounds by remember { mutableStateOf<Rect?>(null) }
-    var dragStartLocalOffset by remember { mutableStateOf(Offset.Zero) }
-    var currentCursorPosition by remember { mutableStateOf(Offset.Zero) }
-
-    val folderBounds = remember { mutableStateMapOf<String, Rect>() }
-    var hoveredFolder by remember { mutableStateOf<String?>(null) }
-    val cardBounds = remember { mutableStateMapOf<String, Rect>() }
-
-    val sidebarScrollState = rememberScrollState()
-    var sidebarBounds by remember { mutableStateOf<Rect?>(null) }
+    var selectedTags by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var tagsRefreshTrigger by remember { mutableIntStateOf(0) }
 
     val scope = rememberCoroutineScope()
-    val folderCounts = remember(passwords.toList()) { passwords.groupingBy { it.folder }.eachCount() }
-    val allTags = remember(passwords.toList()) { passwords.flatMap { it.tags }.toSet().sorted() }
-    val density = LocalDensity.current
 
+    // Все уникальные теги из БД
+    val allTags = remember(passwords, tagsRefreshTrigger) {
+        data.DatabaseManager.getAllTags()
+    }
+
+    // Фильтруем пароли по поиску и тегам
     val filteredPasswords = passwords.filter { entry ->
         val matchesSearch = entry.name.contains(searchQuery, ignoreCase = true) ||
                 entry.login.contains(searchQuery, ignoreCase = true) ||
                 entry.url.contains(searchQuery, ignoreCase = true)
-        val matchesTag = selectedTag == null || entry.tags.contains(selectedTag)
-        val matchesFolder = selectedFolder == null || entry.folder == selectedFolder
-        matchesSearch && matchesTag && matchesFolder
-    }
-
-    LaunchedEffect(draggedEntry) {
-        if (draggedEntry != null) {
-            while (true) {
-                val bounds = sidebarBounds
-                if (bounds != null) {
-                    val y = currentCursorPosition.y
-                    val scrollThreshold = with(density) { 50.dp.toPx() }
-                    val scrollSpeed = 15
-
-                    if (y < bounds.top + scrollThreshold && y > bounds.top) {
-                        sidebarScrollState.scrollTo(sidebarScrollState.value - scrollSpeed)
-                    } else if (y > bounds.bottom - scrollThreshold && y < bounds.bottom) {
-                        sidebarScrollState.scrollTo(sidebarScrollState.value + scrollSpeed)
-                    }
-                }
-                delay(16)
-            }
+        val matchesTags = selectedTags.isEmpty() || selectedTags.all { tag ->
+            entry.tags.contains(tag)
         }
+        matchesSearch && matchesTags
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onPointerEvent(PointerEventType.Scroll) { event ->
-                if (draggedEntry != null) {
-                    val change = event.changes.first()
-                    val delta = change.scrollDelta
-                    val scrollAmount = (delta.y * 25).toInt()
+    // Функция для обновления тегов
+    fun refreshTags() {
+        tagsRefreshTrigger++
+    }
 
-                    scope.launch {
-                        sidebarScrollState.scrollTo(sidebarScrollState.value + scrollAmount)
-                    }
-                    change.consume()
-                }
-            }
-    ) {
-        Row(modifier = Modifier.fillMaxSize().background(BgColor)) {
-            Column(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Боковая панель
+            Surface(
+                color = Color.White,
                 modifier = Modifier
                     .width(250.dp)
                     .fillMaxHeight()
-                    .background(Color.White)
-                    .padding(16.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(32.dp).background(AccentColor, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Lock, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Менеджер", fontWeight = FontWeight.Bold)
-                        Text("Всего записей: ${passwords.size}", fontSize = 12.sp, color = Color.Gray)
-                    }
-                }
-                Spacer(Modifier.height(32.dp))
-
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .onGloballyPositioned { coordinates ->
-                            sidebarBounds = coordinates.boundsInWindow()
-                        }
-                        .verticalScroll(sidebarScrollState)
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Папки", fontWeight = FontWeight.SemiBold)
-                        IconButton(onClick = { showFolderDialog = true }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Add, null, tint = AccentColor)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = AccentColor,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Lock, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Менеджер", fontWeight = FontWeight.Bold)
+                            Text("Всего: ${passwords.size}", fontSize = 12.sp, color = Color.Gray)
                         }
                     }
 
-                    SidebarItem("Все (${passwords.size})", selectedFolder == null, onClick = { selectedFolder = null })
+                    Spacer(Modifier.height(32.dp))
 
-                    folders.forEach { folderName ->
-                        val count = folderCounts[folderName] ?: 0
-                        val isSystemFolder = folderName == "Основная"
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // Секция тегов
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Теги", fontWeight = FontWeight.SemiBold)
 
-                        SidebarItem(
-                            text = "$folderName ($count)",
-                            isSelected = selectedFolder == folderName,
-                            isHovered = hoveredFolder == folderName,
-                            onClick = { selectedFolder = folderName },
-                            onPositioned = { rect -> folderBounds[folderName] = rect },
-                            onEdit = { folderToRename = folderName },
-                            onDelete = if (!isSystemFolder) {
-                                {
-                                    folderBounds.remove(folderName)
-                                    folders.remove(folderName)
-                                    if (selectedFolder == folderName) selectedFolder = null
-                                    passwords.forEachIndexed { index, entry ->
-                                        if (entry.folder == folderName) {
-                                            passwords[index] = entry.copy(folder = "Основная")
+                            // Если выбраны теги - показываем корзину, иначе плюс
+                            if (selectedTags.isNotEmpty()) {
+                                IconButton(
+                                    onClick = {
+                                        // Удаляем выбранные теги из БД
+                                        scope.launch {
+                                            selectedTags.forEach { tag ->
+                                                data.DatabaseManager.deleteTag(tag)
+                                            }
+                                            // Обновляем пароли после удаления тегов
+                                            passwords.forEachIndexed { index, entry ->
+                                                val updatedTags = entry.tags.filterNot { it in selectedTags }
+                                                if (updatedTags != entry.tags) {
+                                                    val updatedEntry = entry.copy(tags = updatedTags)
+                                                    passwords[index] = updatedEntry
+                                                    data.DatabaseManager.savePassword(updatedEntry)
+                                                }
+                                            }
+                                            selectedTags = emptySet()
+                                            refreshTags()
+                                        }
+                                    },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, null, tint = Color(0xFFEF4444))
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = { showAddTagDialog = true },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, null, tint = AccentColor)
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Показываем все теги с возможностью выбора
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Кнопка "Все"
+                            Surface(
+                                color = if (selectedTags.isEmpty()) Color.Black else Color(0xFFF3F4F6),
+                                shape = RoundedCornerShape(16.dp),
+                                onClick = { selectedTags = emptySet() }
+                            ) {
+                                Text(
+                                    "Все",
+                                    color = if (selectedTags.isEmpty()) Color.White else Color.Black,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            // Все теги из БД
+                            allTags.forEach { tag ->
+                                val isSelected = tag in selectedTags
+                                Surface(
+                                    color = if (isSelected) Color.Black else Color(0xFFF3F4F6),
+                                    shape = RoundedCornerShape(16.dp),
+                                    onClick = {
+                                        selectedTags = if (isSelected) {
+                                            selectedTags - tag
+                                        } else {
+                                            selectedTags + tag
                                         }
                                     }
+                                ) {
+                                    Text(
+                                        tag,
+                                        color = if (isSelected) Color.White else Color.Black,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                                    )
                                 }
-                            } else null
-                        )
-                    }
-
-                    Spacer(Modifier.height(24.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("Теги", fontWeight = FontWeight.SemiBold)
-                        if (selectedTag != null) {
-                            IconButton(onClick = { selectedTag = null }, modifier = Modifier.size(20.dp)) {
-                                Icon(Icons.Default.Close, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        allTags.forEach { tag ->
-                            val isSelected = tag == selectedTag
-                            Box(modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { selectedTag = if (isSelected) null else tag }) {
-                                TagChip(text = tag, bg = if (isSelected) Color.Black else Color(0xFFF3F4F6), content = if (isSelected) Color.White else Color.Black)
                             }
                         }
                     }
 
                     Spacer(Modifier.height(16.dp))
-                }
 
-                if (passwords.any { it.isWeak }) {
-                    Spacer(Modifier.height(16.dp))
-                    Card(border = BorderStroke(1.dp, Color(0xFFFFEBEB)), colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2))) {
-                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Warning, null, tint = WeakColor, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Обнаружены слабые пароли.", fontSize = 12.sp, color = WeakColor, lineHeight = 14.sp)
-                        }
+                    // Выйти
+                    Button(
+                        onClick = onLogout,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B7280))
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, null, tint = Color.White)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Выйти", color = Color.White)
                     }
-                }
-
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { onLogout() }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.ExitToApp, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text("Выйти", color = TextColor, fontWeight = FontWeight.Medium)
                 }
             }
 
+            // Основной контент
             Column(modifier = Modifier.weight(1f).padding(24.dp)) {
-                Row(modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(8.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Search, null, tint = Color.Gray); Spacer(Modifier.width(8.dp))
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (searchQuery.isEmpty()) Text("Поиск", color = Color.Gray)
-                        BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, textStyle = TextStyle(color = TextColor, fontSize = 16.sp), cursorBrush = SolidColor(AccentColor), modifier = Modifier.fillMaxWidth(), singleLine = true)
-                    }
-                    // ВОТ СЮДА ДОБАВЛЯЕМ КНОПКУ:
-                    OutlinedButton(onClick = onChangePassword) {
-                        Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp))
+                // Панель поиска и действий
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Search, null, tint = Color.Gray)
                         Spacer(Modifier.width(8.dp))
-                        Text("Сменить пароль")
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (searchQuery.isEmpty()) Text("Поиск", color = Color.Gray)
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                textStyle = TextStyle(color = TextColor, fontSize = 16.sp),
+                                cursorBrush = SolidColor(AccentColor),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // Кнопка смены пароля
+                        OutlinedButton(onClick = onChangePassword) {
+                            Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Сменить пароль")
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // Импорт/Экспорт
+                        OutlinedButton(onClick = { showImportExportDialog = true }) {
+                            Icon(Icons.Default.ImportExport, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Импорт/Экспорт")
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // Добавить пароль
+                        Button(
+                            onClick = { showAddDialog = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
+                        ) {
+                            Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Добавить пароль", color = Color.White)
+                        }
                     }
-                    Spacer(Modifier.width(12.dp))
-                    OutlinedButton(onClick = { showImportExportDialog = true }) { Icon(Icons.Default.ImportExport, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Импорт/Экспорт") }
-                    Spacer(Modifier.width(12.dp))
-                    Button(onClick = { showAddDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)) { Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Добавить пароль", color = Color.White) }
                 }
 
                 Spacer(Modifier.height(24.dp))
 
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    userScrollEnabled = draggedEntry == null
-                ) {
-                    items(filteredPasswords, key = { it.id }) { entry ->
-                        val isDraggingThis = draggedEntry?.id == entry.id
-                        Box(modifier = Modifier.alpha(if (isDraggingThis) 0.3f else 1f)) {
+                // Список паролей
+                if (filteredPasswords.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Lock, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text("Пароли не найдены", color = Color.Gray)
+                            if (searchQuery.isNotEmpty() || selectedTags.isNotEmpty()) {
+                                Text("Измените параметры поиска", fontSize = 14.sp, color = Color.LightGray)
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(filteredPasswords, key = { it.id }) { entry ->
                             PasswordCard(
                                 entry = entry,
                                 masterPassword = masterPassword,
@@ -278,37 +295,6 @@ fun DashboardScreen(
                                 onDelete = {
                                     passwords.remove(entry)
                                     data.DatabaseManager.deletePassword(entry.id)
-                                },
-                                onPositioned = { rect -> cardBounds[entry.id] = rect },
-                                onDragStart = { offset ->
-                                    draggedEntry = entry
-                                    draggedEntryInitialBounds = cardBounds[entry.id]
-                                    dragStartLocalOffset = offset
-                                    dragOffset = Offset.Zero
-                                },
-                                onDrag = { dragAmount ->
-                                    dragOffset += dragAmount
-                                    val initial = draggedEntryInitialBounds
-                                    if (initial != null) {
-                                        val cursorX = initial.left + dragStartLocalOffset.x + dragOffset.x
-                                        val cursorY = initial.top + dragStartLocalOffset.y + dragOffset.y
-                                        val cursorPosition = Offset(cursorX, cursorY)
-
-                                        currentCursorPosition = cursorPosition
-                                        val target = folderBounds.entries.firstOrNull { (_, rect) -> rect.contains(cursorPosition) }?.key
-                                        hoveredFolder = target
-                                    }
-                                },
-                                onDragEnd = {
-                                    if (hoveredFolder != null && draggedEntry != null) {
-                                        val index = passwords.indexOfFirst { it.id == draggedEntry!!.id }
-                                        if (index != -1) {
-                                            passwords[index] = passwords[index].copy(folder = hoveredFolder!!)
-                                        }
-                                    }
-                                    draggedEntry = null
-                                    hoveredFolder = null
-                                    draggedEntryInitialBounds = null
                                 }
                             )
                         }
@@ -316,80 +302,20 @@ fun DashboardScreen(
                 }
             }
         }
-
-        if (draggedEntry != null && draggedEntryInitialBounds != null) {
-            val density = LocalDensity.current
-            val initial = draggedEntryInitialBounds!!
-            val cursorX = initial.left + dragStartLocalOffset.x + dragOffset.x
-            val cursorY = initial.top + dragStartLocalOffset.y + dragOffset.y
-            val ghostLeftDp = with(density) { (cursorX + 20).toDp() }
-            val ghostTopDp = with(density) { (cursorY + 20).toDp() }
-
-            Box(
-                modifier = Modifier
-                    .offset(ghostLeftDp, ghostTopDp)
-                    .width(250.dp)
-                    .shadow(16.dp, RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.95f), RoundedCornerShape(12.dp))
-                    .border(1.dp, AccentColor, RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-                    .zIndex(10f)
-            ) {
-                Column {
-                    Text(draggedEntry!!.name, fontWeight = FontWeight.Bold, color = AccentColor, fontSize = 14.sp)
-                    Text(draggedEntry!!.login, fontSize = 12.sp, color = Color.Gray, maxLines = 1)
-                    if (hoveredFolder != null) {
-                        Spacer(Modifier.height(4.dp))
-                        Text("Переместить в: $hoveredFolder", fontSize = 11.sp, color = PrimaryColor, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
     }
 
-    if (showFolderDialog) {
-        FolderDialog(
-            onDismiss = { showFolderDialog = false },
-            onConfirm = { newName ->
-                if (!folders.contains(newName)) {
-                    folders.add(newName)
-                }
-                showFolderDialog = false
-            }
-        )
-    }
-
-    if (folderToRename != null) {
-        FolderDialog(
-            initialName = folderToRename!!,
-            onDismiss = { folderToRename = null },
-            onConfirm = { newName ->
-                val oldName = folderToRename!!
-                if (newName != oldName && !folders.contains(newName)) {
-                    folderBounds.remove(oldName)
-                    val index = folders.indexOf(oldName)
-                    if (index != -1) folders[index] = newName
-                    if (selectedFolder == oldName) selectedFolder = newName
-                    passwords.forEachIndexed { i, entry ->
-                        if (entry.folder == oldName) {
-                            passwords[i] = entry.copy(folder = newName)
-                        }
-                    }
-                }
-                folderToRename = null
-            }
-        )
-    }
-
+    // Диалоги
     if (showAddDialog) {
         PasswordDialog(
             onDismiss = { showAddDialog = false },
             onSave = { newEntry ->
-                val encryptedEntry = newEntry.copy(passwordEncrypted = SecurityUtils.encrypt(newEntry.passwordEncrypted, masterPassword))
+                val encryptedEntry = newEntry.copy(
+                    passwordEncrypted = SecurityUtils.encrypt(newEntry.passwordEncrypted, masterPassword)
+                )
                 passwords.add(encryptedEntry)
-                // СОХРАНЯЕМ В БД
                 data.DatabaseManager.savePassword(encryptedEntry)
                 showAddDialog = false
+                refreshTags()
             },
             masterPassword = masterPassword
         )
@@ -403,24 +329,55 @@ fun DashboardScreen(
             onSave = { updatedEntry ->
                 val index = passwords.indexOfFirst { it.id == updatedEntry.id }
                 if (index != -1) {
-                    val encryptedEntry = updatedEntry.copy(passwordEncrypted = SecurityUtils.encrypt(updatedEntry.passwordEncrypted, masterPassword))
+                    val encryptedEntry = updatedEntry.copy(
+                        passwordEncrypted = SecurityUtils.encrypt(updatedEntry.passwordEncrypted, masterPassword)
+                    )
                     passwords[index] = encryptedEntry
-                    // ОБНОВЛЯЕМ В БД
                     data.DatabaseManager.savePassword(encryptedEntry)
                 }
                 entryToEdit = null
+                refreshTags()
             }
         )
     }
+
     if (showImportExportDialog) {
         ImportExportDialog(
             onDismiss = { showImportExportDialog = false },
             passwords = passwords,
             masterPassword = masterPassword,
             onImport = { importedPasswords ->
-                // Заменяем текущие пароли на импортированные
-                passwords.clear()
-                passwords.addAll(importedPasswords)
+                importedPasswords.forEach { imported ->
+                    // Сохраняем теги импортированного пароля
+                    imported.tags.forEach { tag ->
+                        data.DatabaseManager.saveTag(tag)
+                    }
+
+                    val existingIndex = passwords.indexOfFirst { it.id == imported.id }
+                    if (existingIndex != -1) {
+                        passwords[existingIndex] = imported
+                        data.DatabaseManager.savePassword(imported)
+                    } else {
+                        passwords.add(imported)
+                        data.DatabaseManager.savePassword(imported)
+                    }
+                }
+                // ОБНОВЛЯЕМ ТЕГИ ПОСЛЕ ИМПОРТА
+                refreshTags()
+            }
+        )
+    }
+
+    if (showAddTagDialog) {
+        AddTagDialog(
+            onDismiss = { showAddTagDialog = false },
+            onConfirm = { newTag ->
+                scope.launch {
+                    // Сохраняем тег в БД
+                    data.DatabaseManager.saveTag(newTag)
+                    refreshTags()
+                    showAddTagDialog = false
+                }
             }
         )
     }

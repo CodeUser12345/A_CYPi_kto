@@ -24,7 +24,7 @@ object DatabaseManager {
 
     private fun createTables() {
         transaction {
-            SchemaUtils.create(PasswordEntries, Settings)
+            SchemaUtils.create(PasswordEntries, Settings, TagsTable)
         }
     }
 
@@ -34,7 +34,6 @@ object DatabaseManager {
         val login = varchar("login", 255).nullable()
         val passwordEncrypted = text("password_encrypted")
         val url = varchar("url", 500).nullable()
-        val folder = varchar("folder", 100).default("Основная")
         val tags = text("tags").nullable()
         val notes = text("notes").nullable()
         val isWeak = bool("is_weak").default(false)
@@ -51,21 +50,46 @@ object DatabaseManager {
         override val primaryKey = PrimaryKey(key)
     }
 
+    // НОВАЯ ТАБЛИЦА ДЛЯ ТЕГОВ
+    object TagsTable : Table("tags") {
+        val id = integer("id").autoIncrement()
+        val name = varchar("name", 100).uniqueIndex()
+
+        override val primaryKey = PrimaryKey(id)
+    }
+
     // Сохранение пароля
     fun savePassword(entry: PasswordEntry) {
         transaction {
-            PasswordEntries.replace {
-                it[id] = entry.id
-                it[name] = entry.name
-                it[login] = entry.login
-                it[passwordEncrypted] = entry.passwordEncrypted
-                it[url] = entry.url
-                it[folder] = entry.folder
-                it[tags] = entry.tags.joinToString(",")
-                it[notes] = entry.notes
-                it[isWeak] = entry.isWeak
-                it[createdAt] = entry.id.hashCode().toLong() // временно
-                it[updatedAt] = System.currentTimeMillis()
+            // Проверяем, существует ли запись
+            val exists = PasswordEntries.select { PasswordEntries.id eq entry.id }.count() > 0
+
+            if (exists) {
+                // Обновляем существующую запись
+                PasswordEntries.update({ PasswordEntries.id eq entry.id }) {
+                    it[name] = entry.name
+                    it[login] = entry.login
+                    it[passwordEncrypted] = entry.passwordEncrypted
+                    it[url] = entry.url
+                    it[tags] = entry.tags.joinToString(",")
+                    it[notes] = entry.notes
+                    it[isWeak] = entry.isWeak
+                    it[updatedAt] = System.currentTimeMillis()
+                }
+            } else {
+                // Вставляем новую запись
+                PasswordEntries.insert {
+                    it[id] = entry.id
+                    it[name] = entry.name
+                    it[login] = entry.login
+                    it[passwordEncrypted] = entry.passwordEncrypted
+                    it[url] = entry.url
+                    it[tags] = entry.tags.joinToString(",")
+                    it[notes] = entry.notes
+                    it[isWeak] = entry.isWeak
+                    it[createdAt] = System.currentTimeMillis()
+                    it[updatedAt] = System.currentTimeMillis()
+                }
             }
         }
     }
@@ -80,7 +104,6 @@ object DatabaseManager {
                     login = it[PasswordEntries.login] ?: "",
                     passwordEncrypted = it[PasswordEntries.passwordEncrypted],
                     url = it[PasswordEntries.url] ?: "",
-                    folder = it[PasswordEntries.folder],
                     tags = it[PasswordEntries.tags]?.split(",")?.filter { tag -> tag.isNotEmpty() } ?: emptyList(),
                     notes = it[PasswordEntries.notes] ?: "",
                     isWeak = it[PasswordEntries.isWeak]
@@ -93,6 +116,50 @@ object DatabaseManager {
     fun deletePassword(id: String) {
         transaction {
             PasswordEntries.deleteWhere { PasswordEntries.id eq id }
+        }
+    }
+
+    // СОХРАНЕНИЕ ТЕГА (ИСПРАВЛЕННАЯ)
+    fun saveTag(tag: String): Boolean {
+        return try {
+            transaction {
+                // Проверяем, существует ли тег
+                val exists = TagsTable.select { TagsTable.name eq tag }.count() > 0
+                if (!exists) {
+                    TagsTable.insert {
+                        it[name] = tag
+                    }
+                    true
+                } else {
+                    false // Тег уже существует
+                }
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // ПОЛУЧЕНИЕ ВСЕХ ТЕГОВ
+    fun getAllTags(): List<String> {
+        return transaction {
+            TagsTable.selectAll().map { it[TagsTable.name] }
+        }
+    }
+
+    // УДАЛЕНИЕ ТЕГА
+    fun deleteTag(tag: String) {
+        transaction {
+            // Удаляем тег из таблицы тегов
+            TagsTable.deleteWhere { TagsTable.name eq tag }
+
+            // Удаляем тег у всех паролей
+            PasswordEntries.selectAll().forEach { row ->
+                val currentTags = row[PasswordEntries.tags]?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+                val updatedTags = currentTags.filter { it != tag }
+                PasswordEntries.update({ PasswordEntries.id eq row[PasswordEntries.id] }) {
+                    it[tags] = updatedTags.joinToString(",")
+                }
+            }
         }
     }
 
@@ -112,15 +179,6 @@ object DatabaseManager {
             Settings.select { Settings.key eq key }
                 .firstOrNull()
                 ?.get(Settings.value)
-        }
-    }
-
-    // Получение всех папок
-    fun getAllFolders(): List<String> {
-        return transaction {
-            (PasswordEntries.slice(PasswordEntries.folder)
-                .selectAll()
-                .map { it[PasswordEntries.folder] } + "Основная").distinct()
         }
     }
 }

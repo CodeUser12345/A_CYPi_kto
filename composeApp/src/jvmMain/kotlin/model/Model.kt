@@ -10,7 +10,6 @@ data class PasswordEntry(
     val login: String,
     val passwordEncrypted: String,
     val url: String = "",
-    val folder: String = "Основная",
     val tags: List<String> = emptyList(),
     val notes: String = "",
     val isWeak: Boolean = false

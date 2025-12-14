@@ -107,12 +107,12 @@ fun PasswordDialog(
                                 value = tagInput,
                                 onValueChange = { tagInput = it },
                                 placeholder = { Text("Например: работа", color = Color.LightGray) },
-                                modifier = Modifier.weight(1f).background(Color(0xFFF9FAFB)),
+                                modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(8.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = AccentColor,
-                                    unfocusedBorderColor = Color.Transparent
+                                    unfocusedBorderColor = Color.Gray
                                 ),
                                 trailingIcon = {
                                     IconButton(onClick = {
@@ -131,7 +131,7 @@ fun PasswordDialog(
                             Spacer(Modifier.height(8.dp))
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 tags.forEach { tag ->
-                                    Box(modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { tags = tags - tag }) {
+                                    Box(modifier = Modifier.clickable { tags = tags - tag }) {
                                         TagChip(text = "$tag ×", bg = Color(0xFFE5E7EB))
                                     }
                                 }
@@ -139,9 +139,21 @@ fun PasswordDialog(
                         }
                     }
                 } else {
-                    Column(Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         Text("Длина пароля: ${passLength.toInt()}")
-                        Slider(value = passLength, onValueChange = { passLength = it }, valueRange = 8f..32f, colors = SliderDefaults.colors(thumbColor = PrimaryColor, activeTrackColor = PrimaryColor))
+                        Slider(
+                            value = passLength,
+                            onValueChange = { passLength = it },
+                            valueRange = 8f..32f,
+                            colors = SliderDefaults.colors(
+                                thumbColor = PrimaryColor,
+                                activeTrackColor = PrimaryColor
+                            )
+                        )
                         Spacer(Modifier.height(16.dp))
                         CheckOption("Заглавные буквы (A-Z)", useUpper) { useUpper = it }
                         CheckOption("Строчные буквы (a-z)", useLower) { useLower = it }
@@ -163,12 +175,19 @@ fun PasswordDialog(
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
                         ) {
-                            Icon(Icons.Default.Refresh, null, tint = Color.White); Spacer(Modifier.width(8.dp)); Text("Сгенерировать пароль", color = Color.White)
+                            Icon(Icons.Default.Refresh, null, tint = Color.White)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Сгенерировать пароль", color = Color.White)
                         }
                         Spacer(Modifier.height(16.dp))
                         if (password.isNotEmpty()) {
-                            Box(Modifier.fillMaxWidth().background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp)).padding(16.dp)) {
-                                Text(password, fontFamily = FontFamily.Monospace)
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFF3F4F6), RoundedCornerShape(8.dp))
+                                    .padding(16.dp)
+                            ) {
+                                Text(password, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                             }
                         }
                     }
@@ -180,10 +199,28 @@ fun PasswordDialog(
                     Button(
                         onClick = {
                             val entryToSave = if (existingEntry != null) {
-                                existingEntry.copy(name = name, login = login, passwordEncrypted = password, url = url, tags = tags)
+                                existingEntry.copy(
+                                    name = name,
+                                    login = login,
+                                    passwordEncrypted = password,
+                                    url = url,
+                                    tags = tags
+                                )
                             } else {
-                                PasswordEntry(name = name, login = login, passwordEncrypted = password, url = url, tags = tags)
+                                PasswordEntry(
+                                    name = name,
+                                    login = login,
+                                    passwordEncrypted = password,
+                                    url = url,
+                                    tags = tags
+                                )
                             }
+
+                            // СОХРАНЯЕМ ВСЕ ТЕГИ В ТАБЛИЦУ ТЕГОВ
+                            tags.forEach { tag ->
+                                data.DatabaseManager.saveTag(tag)
+                            }
+
                             onSave(entryToSave)
                         },
                         modifier = Modifier.height(40.dp),
