@@ -45,6 +45,7 @@ import ui.components.TagChip
 import ui.dialogs.FolderDialog
 import ui.dialogs.PasswordDialog
 import ui.dialogs.ImportExportDialog
+import ui.dialogs.ChangeMasterPasswordDialog
 import ui.theme.AccentColor
 import ui.theme.BgColor
 import ui.theme.PrimaryColor
@@ -58,12 +59,12 @@ fun DashboardScreen(
     passwords: MutableList<PasswordEntry>,
     folders: MutableList<String>,
     masterPassword: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onChangePassword: () -> Unit  // Добавили этот параметр
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var entryToEdit by remember { mutableStateOf<PasswordEntry?>(null) }
     var showImportExportDialog by remember { mutableStateOf(false) }
-
     var showFolderDialog by remember { mutableStateOf(false) }
     var folderToRename by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -246,9 +247,16 @@ fun DashboardScreen(
                 Row(modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(8.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Search, null, tint = Color.Gray); Spacer(Modifier.width(8.dp))
                     Box(modifier = Modifier.weight(1f)) {
-                        if (searchQuery.isEmpty()) Text("Поиск по названию, логину или URL...", color = Color.Gray)
+                        if (searchQuery.isEmpty()) Text("Поиск", color = Color.Gray)
                         BasicTextField(value = searchQuery, onValueChange = { searchQuery = it }, textStyle = TextStyle(color = TextColor, fontSize = 16.sp), cursorBrush = SolidColor(AccentColor), modifier = Modifier.fillMaxWidth(), singleLine = true)
                     }
+                    // ВОТ СЮДА ДОБАВЛЯЕМ КНОПКУ:
+                    OutlinedButton(onClick = onChangePassword) {
+                        Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Сменить пароль")
+                    }
+                    Spacer(Modifier.width(12.dp))
                     OutlinedButton(onClick = { showImportExportDialog = true }) { Icon(Icons.Default.ImportExport, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Импорт/Экспорт") }
                     Spacer(Modifier.width(12.dp))
                     Button(onClick = { showAddDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)) { Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Добавить пароль", color = Color.White) }
@@ -267,7 +275,10 @@ fun DashboardScreen(
                                 entry = entry,
                                 masterPassword = masterPassword,
                                 onEdit = { entryToEdit = entry },
-                                onDelete = { passwords.remove(entry) },
+                                onDelete = {
+                                    passwords.remove(entry)
+                                    data.DatabaseManager.deletePassword(entry.id)
+                                },
                                 onPositioned = { rect -> cardBounds[entry.id] = rect },
                                 onDragStart = { offset ->
                                     draggedEntry = entry
@@ -370,7 +381,47 @@ fun DashboardScreen(
         )
     }
 
-    if (showAddDialog) { PasswordDialog(onDismiss = { showAddDialog = false }, onSave = { newEntry -> val encryptedEntry = newEntry.copy(passwordEncrypted = SecurityUtils.encrypt(newEntry.passwordEncrypted, masterPassword)); passwords.add(encryptedEntry); showAddDialog = false }, masterPassword = masterPassword) }
-    if (entryToEdit != null) { PasswordDialog(existingEntry = entryToEdit, masterPassword = masterPassword, onDismiss = { entryToEdit = null }, onSave = { updatedEntry -> val index = passwords.indexOfFirst { it.id == updatedEntry.id }; if (index != -1) { val encryptedEntry = updatedEntry.copy(passwordEncrypted = SecurityUtils.encrypt(updatedEntry.passwordEncrypted, masterPassword)); passwords[index] = encryptedEntry }; entryToEdit = null }) }
-    if (showImportExportDialog) { ImportExportDialog(onDismiss = { showImportExportDialog = false }) }
+    if (showAddDialog) {
+        PasswordDialog(
+            onDismiss = { showAddDialog = false },
+            onSave = { newEntry ->
+                val encryptedEntry = newEntry.copy(passwordEncrypted = SecurityUtils.encrypt(newEntry.passwordEncrypted, masterPassword))
+                passwords.add(encryptedEntry)
+                // СОХРАНЯЕМ В БД
+                data.DatabaseManager.savePassword(encryptedEntry)
+                showAddDialog = false
+            },
+            masterPassword = masterPassword
+        )
+    }
+
+    if (entryToEdit != null) {
+        PasswordDialog(
+            existingEntry = entryToEdit,
+            masterPassword = masterPassword,
+            onDismiss = { entryToEdit = null },
+            onSave = { updatedEntry ->
+                val index = passwords.indexOfFirst { it.id == updatedEntry.id }
+                if (index != -1) {
+                    val encryptedEntry = updatedEntry.copy(passwordEncrypted = SecurityUtils.encrypt(updatedEntry.passwordEncrypted, masterPassword))
+                    passwords[index] = encryptedEntry
+                    // ОБНОВЛЯЕМ В БД
+                    data.DatabaseManager.savePassword(encryptedEntry)
+                }
+                entryToEdit = null
+            }
+        )
+    }
+    if (showImportExportDialog) {
+        ImportExportDialog(
+            onDismiss = { showImportExportDialog = false },
+            passwords = passwords,
+            masterPassword = masterPassword,
+            onImport = { importedPasswords ->
+                // Заменяем текущие пароли на импортированные
+                passwords.clear()
+                passwords.addAll(importedPasswords)
+            }
+        )
+    }
 }

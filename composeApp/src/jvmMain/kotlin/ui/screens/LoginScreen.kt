@@ -18,10 +18,18 @@ import androidx.compose.ui.unit.sp
 import ui.theme.AccentColor
 import ui.theme.BgColor
 import ui.theme.PrimaryColor
+import utils.SecurityUtils
 
 @Composable
-fun LoginScreen(onLogin: (String) -> Unit) {
+fun LoginScreen(
+    masterPasswordHash: String?,
+    masterPasswordSalt: String?,
+    onLogin: (String) -> Unit,
+    onFirstSetup: (String) -> Unit
+) {
     var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    val isFirstTime = masterPasswordHash == null
 
     Box(modifier = Modifier.fillMaxSize().background(BgColor), contentAlignment = Alignment.Center) {
         Card(
@@ -40,12 +48,31 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                 Spacer(Modifier.height(24.dp))
                 Text("Менеджер Паролей", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text("Введите мастер-пароль для разблокировки", fontSize = 14.sp, color = Color.Gray)
+
+                if (isFirstTime) {
+                    Text("Установите мастер-пароль", fontSize = 14.sp, color = Color.Gray)
+                    Text("Этот пароль будет использоваться для шифрования всех данных",
+                        fontSize = 12.sp, color = Color.Gray, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                } else {
+                    Text("Введите мастер-пароль для разблокировки", fontSize = 14.sp, color = Color.Gray)
+                }
+
                 Spacer(Modifier.height(24.dp))
+
+                if (error.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2))
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(error, color = Color(0xFFDC2626))
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = { password = it; error = "" },
                     label = { Text("Мастер-пароль") },
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
@@ -57,13 +84,29 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                 )
 
                 Spacer(Modifier.height(24.dp))
+
                 Button(
-                    onClick = { onLogin(password) },
+                    onClick = {
+                        if (password.length < 8) {
+                            error = "Пароль должен быть не менее 8 символов"
+                            return@Button
+                        }
+
+                        if (isFirstTime) {
+                            onFirstSetup(password)
+                        } else {
+                            if (SecurityUtils.verifyPassword(password, masterPasswordHash!!, masterPasswordSalt!!)) {
+                                onLogin(password)
+                            } else {
+                                error = "Неверный мастер-пароль"
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
                 ) {
-                    Text("Разблокировать", color = Color.White)
+                    Text(if (isFirstTime) "Установить пароль" else "Разблокировать", color = Color.White)
                 }
                 Spacer(Modifier.height(16.dp))
                 Text("Все пароли зашифрованы с использованием AES-256", fontSize = 11.sp, color = Color.Gray)
