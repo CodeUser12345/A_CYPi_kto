@@ -1,6 +1,5 @@
 package ui.dialogs
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import model.PasswordEntry
 import ui.components.TabButton
@@ -30,6 +28,14 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
+/**
+ * Диалоговое окно для Импорта/Экспорта паролей.
+ *
+ * Позволяет:
+ * - Экспортировать базу паролей в JSON (предупреждает о безопасности).
+ * - Импортировать пароли из JSON файла.
+ * Использует [JFileChooser] для выбора файлов в Desktop среде.
+ */
 @Composable
 fun ImportExportDialog(
     onDismiss: () -> Unit,
@@ -55,7 +61,6 @@ fun ImportExportDialog(
                 Text("Экспортируйте или импортируйте ваши пароли", color = Color.Gray)
                 Spacer(Modifier.height(20.dp))
 
-                // ИСПРАВЛЕННАЯ СТРОКА - используем Card для фона
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F4F6)),
@@ -169,7 +174,6 @@ private fun exportToJson(
 
         if (fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
             val file = fileChooser.selectedFile
-            // Дешифруем пароли для экспорта
             val decryptedPasswords = passwords.map { entry ->
                 entry.copy(
                     passwordEncrypted = SecurityUtils.decrypt(entry.passwordEncrypted, masterPassword)
@@ -204,7 +208,6 @@ private fun importFromJson(
             val json = Json { ignoreUnknownKeys = true }
             val imported = json.decodeFromString<List<PasswordEntry>>(jsonString)
 
-            // Шифруем пароли перед импортом
             val encryptedPasswords = imported.map { entry ->
                 entry.copy(
                     passwordEncrypted = SecurityUtils.encrypt(entry.passwordEncrypted, masterPassword)

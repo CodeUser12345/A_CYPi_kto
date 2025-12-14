@@ -14,9 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +29,16 @@ import ui.theme.AccentColor
 import ui.theme.PrimaryColor
 import utils.SecurityUtils
 
+/**
+ * Основное диалоговое окно для создания и редактирования записи пароля.
+ *
+ * Содержит две вкладки:
+ * 1. **Детали**: Поля ввода для названия, логина, пароля, URL и тегов.
+ * 2. **Генератор**: Инструмент для создания безопасного пароля с настройками длины и символов.
+ *
+ * @param existingEntry Если передан, диалог работает в режиме редактирования.
+ * @param masterPassword Необходим для дешифровки текущего пароля (если редактирование).
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PasswordDialog(
@@ -215,12 +223,9 @@ fun PasswordDialog(
                                     tags = tags
                                 )
                             }
-
-                            // СОХРАНЯЕМ ВСЕ ТЕГИ В ТАБЛИЦУ ТЕГОВ
                             tags.forEach { tag ->
                                 data.DatabaseManager.saveTag(tag)
                             }
-
                             onSave(entryToSave)
                         },
                         modifier = Modifier.height(40.dp),

@@ -7,9 +7,18 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.util.*
 
+/**
+ * Менеджер базы данных SQLite.
+ * Отвечает за инициализацию соединения, создание схемы и выполнение всех CRUD-операций.
+ * База данных хранится локально в файле `passwords.db`.
+ */
 object DatabaseManager {
     private const val DB_NAME = "passwords.db"
 
+    /**
+     * Устанавливает JDBC соединение с базой данных SQLite.
+     * Создает директорию `.password-manager` в домашней папке пользователя при необходимости.
+     */
     private fun getConnection() {
         val dbFile = File(System.getProperty("user.home"), ".password-manager")
         if (!dbFile.exists()) dbFile.mkdirs()
@@ -22,12 +31,18 @@ object DatabaseManager {
         createTables()
     }
 
+    /**
+     * Создает таблицы в базе данных, если они отсутствуют.
+     */
     private fun createTables() {
         transaction {
             SchemaUtils.create(PasswordEntries, Settings, TagsTable)
         }
     }
 
+    /**
+     * ORM-определение таблицы паролей.
+     */
     object PasswordEntries : Table("passwords") {
         val id = varchar("id", 36)
         val name = varchar("name", 255)
@@ -43,6 +58,9 @@ object DatabaseManager {
         override val primaryKey = PrimaryKey(id)
     }
 
+    /**
+     * ORM-определение таблицы настроек (Key-Value).
+     */
     object Settings : Table("settings") {
         val key = varchar("key", 50)
         val value = text("value")
@@ -50,7 +68,9 @@ object DatabaseManager {
         override val primaryKey = PrimaryKey(key)
     }
 
-    // НОВАЯ ТАБЛИЦА ДЛЯ ТЕГОВ
+    /**
+     * ORM-определение таблицы тегов.
+     */
     object TagsTable : Table("tags") {
         val id = integer("id").autoIncrement()
         val name = varchar("name", 100).uniqueIndex()
@@ -58,14 +78,15 @@ object DatabaseManager {
         override val primaryKey = PrimaryKey(id)
     }
 
-    // Сохранение пароля
+    /**
+     * Сохраняет или обновляет запись пароля.
+     * @param entry Объект [PasswordEntry].
+     */
     fun savePassword(entry: PasswordEntry) {
         transaction {
-            // Проверяем, существует ли запись
             val exists = PasswordEntries.select { PasswordEntries.id eq entry.id }.count() > 0
 
             if (exists) {
-                // Обновляем существующую запись
                 PasswordEntries.update({ PasswordEntries.id eq entry.id }) {
                     it[name] = entry.name
                     it[login] = entry.login
@@ -77,7 +98,6 @@ object DatabaseManager {
                     it[updatedAt] = System.currentTimeMillis()
                 }
             } else {
-                // Вставляем новую запись
                 PasswordEntries.insert {
                     it[id] = entry.id
                     it[name] = entry.name
@@ -94,7 +114,9 @@ object DatabaseManager {
         }
     }
 
-    // Получение всех паролей
+    /**
+     * Возвращает список всех записей паролей.
+     */
     fun getAllPasswords(): List<PasswordEntry> {
         return transaction {
             PasswordEntries.selectAll().map {
@@ -112,18 +134,22 @@ object DatabaseManager {
         }
     }
 
-    // Удаление пароля
+    /**
+     * Удаляет запись пароля по ID.
+     */
     fun deletePassword(id: String) {
         transaction {
             PasswordEntries.deleteWhere { PasswordEntries.id eq id }
         }
     }
 
-    // СОХРАНЕНИЕ ТЕГА (ИСПРАВЛЕННАЯ)
+    /**
+     * Сохраняет новый тег, если он уникален.
+     * @return true, если успешно добавлен.
+     */
     fun saveTag(tag: String): Boolean {
         return try {
             transaction {
-                // Проверяем, существует ли тег
                 val exists = TagsTable.select { TagsTable.name eq tag }.count() > 0
                 if (!exists) {
                     TagsTable.insert {
@@ -131,7 +157,7 @@ object DatabaseManager {
                     }
                     true
                 } else {
-                    false // Тег уже существует
+                    false
                 }
             }
         } catch (e: Exception) {
@@ -139,20 +165,22 @@ object DatabaseManager {
         }
     }
 
-    // ПОЛУЧЕНИЕ ВСЕХ ТЕГОВ
+    /**
+     * Получает список всех тегов.
+     */
     fun getAllTags(): List<String> {
         return transaction {
             TagsTable.selectAll().map { it[TagsTable.name] }
         }
     }
 
-    // УДАЛЕНИЕ ТЕГА
+    /**
+     * Удаляет тег из таблицы тегов и убирает его из всех записей паролей.
+     */
     fun deleteTag(tag: String) {
         transaction {
-            // Удаляем тег из таблицы тегов
             TagsTable.deleteWhere { TagsTable.name eq tag }
 
-            // Удаляем тег у всех паролей
             PasswordEntries.selectAll().forEach { row ->
                 val currentTags = row[PasswordEntries.tags]?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
                 val updatedTags = currentTags.filter { it != tag }
@@ -163,7 +191,9 @@ object DatabaseManager {
         }
     }
 
-    // Сохранение настройки
+    /**
+     * Сохраняет настройку (ключ-значение).
+     */
     fun saveSetting(key: String, value: String) {
         transaction {
             Settings.replace {
@@ -173,7 +203,9 @@ object DatabaseManager {
         }
     }
 
-    // Получение настройки
+    /**
+     * Получает значение настройки.
+     */
     fun getSetting(key: String): String? {
         return transaction {
             Settings.select { Settings.key eq key }

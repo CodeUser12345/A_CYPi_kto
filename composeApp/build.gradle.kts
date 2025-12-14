@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization") version "1.9.10"
+    id("org.jetbrains.dokka") version "1.9.10"
 }
 
 kotlin {
@@ -44,6 +45,18 @@ compose.desktop {
     }
 }
 
-tasks.withType<Test>().configureEach {
-    enabled = false
+tasks.withType<Test> {
+    // Включаем поддержку JUnit
+    useJUnitPlatform()
+
+    reports {
+        html.required.set(true)
+        junitXml.required.set(true)
+    }
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }

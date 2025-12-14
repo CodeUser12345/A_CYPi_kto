@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +15,12 @@ import androidx.compose.ui.window.Dialog
 import ui.components.SimpleInput
 import ui.theme.PrimaryColor
 
+/**
+ * Диалоговое окно для добавления нового тега.
+ *
+ * @param onDismiss Callback закрытия диалога.
+ * @param onConfirm Callback с введенным названием тега.
+ */
 @Composable
 fun AddTagDialog(
     onDismiss: () -> Unit,

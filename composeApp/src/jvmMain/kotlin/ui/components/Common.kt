@@ -14,6 +14,10 @@ import androidx.compose.ui.unit.sp
 import ui.theme.AccentColor
 import ui.theme.PrimaryColor
 
+/**
+ * UI компонент: "Чип" тега.
+ * Отображает текст на цветном фоне с закругленными углами.
+ */
 @Composable
 fun TagChip(text: String, bg: Color = Color(0xFFF3F4F6), content: Color = Color.Black) {
     Box(modifier = Modifier
@@ -23,11 +27,17 @@ fun TagChip(text: String, bg: Color = Color(0xFFF3F4F6), content: Color = Color.
     }
 }
 
+/**
+ * UI компонент: Заголовок для поля ввода.
+ */
 @Composable
 fun InputLabel(text: String) {
     Text(text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp, top = 12.dp))
 }
 
+/**
+ * UI компонент: Стандартное текстовое поле ввода.
+ */
 @Composable
 fun SimpleInput(value: String, placeholder: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
@@ -43,6 +53,9 @@ fun SimpleInput(value: String, placeholder: String, onValueChange: (String) -> U
     )
 }
 
+/**
+ * UI компонент: Строка с чекбоксом и текстом.
+ */
 @Composable
 fun CheckOption(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
@@ -51,6 +64,9 @@ fun CheckOption(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Un
     }
 }
 
+/**
+ * UI компонент: Кнопка переключения вкладки.
+ */
 @Composable
 fun RowScope.TabButton(text: String, isActive: Boolean, onClick: () -> Unit) {
     Button(

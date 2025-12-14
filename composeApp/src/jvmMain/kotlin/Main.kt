@@ -18,6 +18,15 @@ import ui.theme.BgColor
 import ui.theme.PrimaryColor
 import utils.SecurityUtils
 
+/**
+ * Точка входа в приложение.
+ *
+ * Управляет глобальным состоянием:
+ * - Текущий экран ([ScreenState]).
+ * - Данные текущей сессии (Мастер-пароль).
+ * - Загрузка начальных данных из БД.
+ * - Обработка глобальных событий (Смена пароля, Выход).
+ */
 fun main() = application {
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp, position = WindowPosition(Alignment.Center))
 
@@ -29,7 +38,7 @@ fun main() = application {
 
     val passwords = remember { mutableStateListOf<PasswordEntry>() }
 
-    // Загружаем сохраненные настройки при старте
+    // Инициализация при запуске
     LaunchedEffect(Unit) {
         val savedHash = DatabaseManager.getSetting("master_password_hash")
         val savedSalt = DatabaseManager.getSetting("master_password_salt")
@@ -39,28 +48,26 @@ fun main() = application {
             masterPasswordSalt = savedSalt
         }
 
-        // Загружаем пароли из БД
         passwords.clear()
         passwords.addAll(DatabaseManager.getAllPasswords())
 
-        // ПЕРЕНЕСИ СУЩЕСТВУЮЩИЕ ТЕГИ В НОВУЮ ТАБЛИЦУ (делаем только один раз)
-        // Проверяем, была ли уже миграция
+        // Миграция тегов (если требуется)
         val migrationDone = DatabaseManager.getSetting("tags_migration_done")
         if (migrationDone == null) {
-            // Миграция еще не делалась
             val existingTags = passwords.flatMap { it.tags }.toSet()
             existingTags.forEach { tag ->
                 DatabaseManager.saveTag(tag)
             }
-            // Помечаем, что миграция сделана
             DatabaseManager.saveSetting("tags_migration_done", "true")
         }
     }
 
-    // Функция для смены пароля
+    /**
+     * Логика смены мастер-пароля.
+     * Перешифровывает все записи в БД с использованием нового ключа.
+     */
     fun changeMasterPassword(oldPassword: String, newPassword: String) {
         try {
-            // Перешифровываем все пароли новым паролем
             val allPasswords = DatabaseManager.getAllPasswords()
             allPasswords.forEach { entry ->
                 val decrypted = SecurityUtils.decrypt(entry.passwordEncrypted, oldPassword)
@@ -68,7 +75,6 @@ fun main() = application {
                 DatabaseManager.savePassword(entry.copy(passwordEncrypted = reencrypted))
             }
 
-            // Сохраняем новый хэш
             val (newHash, newSalt) = SecurityUtils.hashPassword(newPassword)
             DatabaseManager.saveSetting("master_password_hash", newHash)
             DatabaseManager.saveSetting("master_password_salt", newSalt)
@@ -77,7 +83,6 @@ fun main() = application {
             masterPasswordSalt = newSalt
             masterPassword = newPassword
 
-            // Обновляем список паролей
             passwords.clear()
             passwords.addAll(DatabaseManager.getAllPasswords())
         } catch (e: Exception) {
@@ -139,10 +144,8 @@ fun main() = application {
                             }
                         }
 
-                        // Загружаем пароли из БД
                         passwords.clear()
                         passwords.addAll(DatabaseManager.getAllPasswords())
-
                         screen = ScreenState.DASHBOARD
                     },
                     onFirstSetup = { pass ->

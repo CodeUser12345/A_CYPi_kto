@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -26,12 +25,23 @@ import ui.dialogs.ImportExportDialog
 import ui.dialogs.PasswordDialog
 import ui.dialogs.AddTagDialog
 import ui.theme.AccentColor
-import ui.theme.BgColor
 import ui.theme.PrimaryColor
 import ui.theme.TextColor
-import ui.theme.WeakColor
 import utils.SecurityUtils
 
+/**
+ * Главный экран приложения (Панель управления).
+ *
+ * Содержит:
+ * - Боковое меню с фильтрацией по тегам.
+ * - Верхнюю панель с поиском и кнопками действий (добавить, импорт/экспорт, смена пароля).
+ * - Список карточек паролей с поддержкой прокрутки.
+ *
+ * @param passwords Список паролей для отображения (MutableList для реактивного обновления).
+ * @param masterPassword Мастер-пароль для операций шифрования/дешифрования.
+ * @param onLogout Callback выхода из системы.
+ * @param onChangePassword Callback открытия диалога смены пароля.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
@@ -50,12 +60,10 @@ fun DashboardScreen(
 
     val scope = rememberCoroutineScope()
 
-    // Все уникальные теги из БД
     val allTags = remember(passwords, tagsRefreshTrigger) {
         data.DatabaseManager.getAllTags()
     }
 
-    // Фильтруем пароли по поиску и тегам
     val filteredPasswords = passwords.filter { entry ->
         val matchesSearch = entry.name.contains(searchQuery, ignoreCase = true) ||
                 entry.login.contains(searchQuery, ignoreCase = true) ||
@@ -66,7 +74,6 @@ fun DashboardScreen(
         matchesSearch && matchesTags
     }
 
-    // Функция для обновления тегов
     fun refreshTags() {
         tagsRefreshTrigger++
     }
@@ -105,7 +112,6 @@ fun DashboardScreen(
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
-                        // Секция тегов
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -113,16 +119,13 @@ fun DashboardScreen(
                         ) {
                             Text("Теги", fontWeight = FontWeight.SemiBold)
 
-                            // Если выбраны теги - показываем корзину, иначе плюс
                             if (selectedTags.isNotEmpty()) {
                                 IconButton(
                                     onClick = {
-                                        // Удаляем выбранные теги из БД
                                         scope.launch {
                                             selectedTags.forEach { tag ->
                                                 data.DatabaseManager.deleteTag(tag)
                                             }
-                                            // Обновляем пароли после удаления тегов
                                             passwords.forEachIndexed { index, entry ->
                                                 val updatedTags = entry.tags.filterNot { it in selectedTags }
                                                 if (updatedTags != entry.tags) {
@@ -151,12 +154,10 @@ fun DashboardScreen(
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Показываем все теги с возможностью выбора
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            // Кнопка "Все"
                             Surface(
                                 color = if (selectedTags.isEmpty()) Color.Black else Color(0xFFF3F4F6),
                                 shape = RoundedCornerShape(16.dp),
@@ -169,7 +170,6 @@ fun DashboardScreen(
                                 )
                             }
 
-                            // Все теги из БД
                             allTags.forEach { tag ->
                                 val isSelected = tag in selectedTags
                                 Surface(
@@ -195,7 +195,6 @@ fun DashboardScreen(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Выйти
                     Button(
                         onClick = onLogout,
                         modifier = Modifier.fillMaxWidth(),
@@ -210,7 +209,6 @@ fun DashboardScreen(
 
             // Основной контент
             Column(modifier = Modifier.weight(1f).padding(24.dp)) {
-                // Панель поиска и действий
                 Surface(
                     color = Color.White,
                     shape = RoundedCornerShape(8.dp),
@@ -236,7 +234,6 @@ fun DashboardScreen(
 
                         Spacer(Modifier.width(12.dp))
 
-                        // Кнопка смены пароля
                         OutlinedButton(onClick = onChangePassword) {
                             Icon(Icons.Default.Key, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -245,7 +242,6 @@ fun DashboardScreen(
 
                         Spacer(Modifier.width(12.dp))
 
-                        // Импорт/Экспорт
                         OutlinedButton(onClick = { showImportExportDialog = true }) {
                             Icon(Icons.Default.ImportExport, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
@@ -254,7 +250,6 @@ fun DashboardScreen(
 
                         Spacer(Modifier.width(12.dp))
 
-                        // Добавить пароль
                         Button(
                             onClick = { showAddDialog = true },
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryColor)
@@ -268,7 +263,6 @@ fun DashboardScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Список паролей
                 if (filteredPasswords.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -304,7 +298,6 @@ fun DashboardScreen(
         }
     }
 
-    // Диалоги
     if (showAddDialog) {
         PasswordDialog(
             onDismiss = { showAddDialog = false },
@@ -348,7 +341,6 @@ fun DashboardScreen(
             masterPassword = masterPassword,
             onImport = { importedPasswords ->
                 importedPasswords.forEach { imported ->
-                    // Сохраняем теги импортированного пароля
                     imported.tags.forEach { tag ->
                         data.DatabaseManager.saveTag(tag)
                     }
@@ -362,7 +354,6 @@ fun DashboardScreen(
                         data.DatabaseManager.savePassword(imported)
                     }
                 }
-                // ОБНОВЛЯЕМ ТЕГИ ПОСЛЕ ИМПОРТА
                 refreshTags()
             }
         )
@@ -373,7 +364,6 @@ fun DashboardScreen(
             onDismiss = { showAddTagDialog = false },
             onConfirm = { newTag ->
                 scope.launch {
-                    // Сохраняем тег в БД
                     data.DatabaseManager.saveTag(newTag)
                     refreshTags()
                     showAddTagDialog = false

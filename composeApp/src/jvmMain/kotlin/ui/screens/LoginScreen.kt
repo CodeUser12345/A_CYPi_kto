@@ -10,9 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -22,6 +19,17 @@ import ui.theme.BgColor
 import ui.theme.PrimaryColor
 import utils.SecurityUtils
 
+/**
+ * Экран авторизации пользователя.
+ * Обрабатывает два сценария:
+ * 1. Первый запуск: Создание и сохранение нового мастер-пароля.
+ * 2. Обычный вход: Проверка введенного пароля с сохраненным хешем.
+ *
+ * @param masterPasswordHash Сохраненный хеш пароля (null при первом запуске).
+ * @param masterPasswordSalt Сохраненная соль (null при первом запуске).
+ * @param onLogin Callback успешного входа.
+ * @param onFirstSetup Callback успешной установки нового пароля.
+ */
 @Composable
 fun LoginScreen(
     masterPasswordHash: String?,
@@ -87,7 +95,7 @@ fun LoginScreen(
                         onValueChange = { password = it; error = "" },
                         label = { Text("Мастер-пароль") },
                         visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth(), // УБРАТЬ .onKeyEvent
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = AccentColor,

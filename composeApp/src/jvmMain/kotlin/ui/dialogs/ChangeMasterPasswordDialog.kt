@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -12,9 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -25,6 +21,14 @@ import ui.theme.AccentColor
 import ui.theme.PrimaryColor
 import utils.SecurityUtils
 
+/**
+ * Диалоговое окно для смены мастер-пароля.
+ * Включает этапы:
+ * 1. Проверка текущего пароля.
+ * 2. Ввод нового пароля.
+ * 3. Подтверждение нового пароля.
+ * 4. Валидация (длина, совпадение).
+ */
 @Composable
 fun ChangeMasterPasswordDialog(
     onDismiss: () -> Unit,
@@ -150,13 +154,11 @@ fun ChangeMasterPasswordDialog(
                     Spacer(Modifier.width(12.dp))
                     Button(
                         onClick = {
-                            // Проверка старого пароля
                             if (!SecurityUtils.verifyPassword(oldPassword, currentHash, currentSalt)) {
                                 error = "Неверный текущий пароль"
                                 return@Button
                             }
 
-                            // Проверка нового пароля
                             if (newPassword.length < 8) {
                                 error = "Новый пароль должен быть не менее 8 символов"
                                 return@Button

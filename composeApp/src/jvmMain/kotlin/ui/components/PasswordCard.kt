@@ -14,7 +14,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -30,6 +29,20 @@ import ui.theme.WeakColor
 import utils.SecurityUtils
 import java.awt.datatransfer.StringSelection
 
+/**
+ * Компонент карточки пароля для отображения в списке.
+ *
+ * Поддерживает:
+ * - Отображение информации (название, логин, URL).
+ * - Расшифровку пароля "на лету" при нажатии на кнопку "глаз".
+ * - Копирование логина и пароля в буфер обмена.
+ * - Редактирование и удаление записи.
+ *
+ * @param entry Модель данных пароля [PasswordEntry].
+ * @param masterPassword Мастер-пароль, необходимый для расшифровки поля `entry.passwordEncrypted`.
+ * @param onEdit Callback, вызываемый при нажатии на кнопку редактирования.
+ * @param onDelete Callback, вызываемый при нажатии на кнопку удаления.
+ */
 @Composable
 fun PasswordCard(
     entry: PasswordEntry,
@@ -41,11 +54,13 @@ fun PasswordCard(
     onDragEnd: () -> Unit = {},
     onPositioned: ((Rect) -> Unit)? = null
 ) {
+    // Состояние видимости пароля (скрыт звездочками или открыт)
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
+    // Расшифровываем пароль только если изменились входные данные
     val decryptedPassword = remember(entry.passwordEncrypted, masterPassword) {
         SecurityUtils.decrypt(entry.passwordEncrypted, masterPassword)
     }
@@ -78,6 +93,7 @@ fun PasswordCard(
                     Text(entry.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
 
+                    // Секция Логина
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Логин: ", color = Color.Gray, modifier = Modifier.width(75.dp))
                         Box(Modifier.background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp)).padding(4.dp)) {
@@ -97,6 +113,7 @@ fun PasswordCard(
                     }
                     Spacer(Modifier.height(8.dp))
 
+                    // Секция Пароля
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Пароль: ", color = Color.Gray, modifier = Modifier.width(75.dp))
                         Box(Modifier.background(Color(0xFFF3F4F6), RoundedCornerShape(4.dp)).padding(4.dp)) {
@@ -105,12 +122,14 @@ fun PasswordCard(
                                 fontFamily = FontFamily.Monospace
                             )
                         }
+                        // Кнопка показать/скрыть
                         IconButton(
                             onClick = { isPasswordVisible = !isPasswordVisible },
                             modifier = Modifier.size(32.dp).padding(start = 4.dp)
                         ) {
                             Icon(if(isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
                         }
+                        // Кнопка копировать
                         IconButton(
                             onClick = {
                                 scope.launch {
@@ -140,6 +159,7 @@ fun PasswordCard(
 
             Spacer(Modifier.height(16.dp))
 
+            // Теги
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 entry.tags.forEach { TagChip(it) }
                 if(entry.isWeak) {
