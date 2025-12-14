@@ -1,4 +1,4 @@
-package org.example.project.ui.components
+package ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,8 +20,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.TextColor
+import ui.theme.AccentColor
+import ui.theme.TextColor
 
 @Composable
 fun SidebarItem(

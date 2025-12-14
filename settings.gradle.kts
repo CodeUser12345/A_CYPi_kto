@@ -1,15 +1,11 @@
-rootProject.name = "ProjectPasswordManager"
+// КАКИЕ модули в проекте
+
+rootProject.name = "PasswordManager"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
-        google {
-            mavenContent {
-                includeGroupAndSubgroups("androidx")
-                includeGroupAndSubgroups("com.android")
-                includeGroupAndSubgroups("com.google")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -25,6 +21,12 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+    }
+
+    versionCatalogs {
+        create("libs") {
+            from(files("libs.versions.toml"))
+        }
     }
 }
 

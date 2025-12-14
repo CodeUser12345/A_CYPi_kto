@@ -1,4 +1,4 @@
-package org.example.project.ui.components
+package ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -24,10 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.toSize
 import kotlinx.coroutines.launch
-import org.example.project.model.PasswordEntry
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.WeakColor
-import org.example.project.utils.SecurityUtils
+import model.PasswordEntry
+import ui.theme.AccentColor
+import ui.theme.WeakColor
+import utils.SecurityUtils
 import java.awt.datatransfer.StringSelection
 
 @Composable

@@ -1,4 +1,4 @@
-package org.example.project.ui.components
+package ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,8 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.PrimaryColor
+import ui.theme.AccentColor
+import ui.theme.PrimaryColor
 
 @Composable
 fun TagChip(text: String, bg: Color = Color(0xFFF3F4F6), content: Color = Color.Black) {

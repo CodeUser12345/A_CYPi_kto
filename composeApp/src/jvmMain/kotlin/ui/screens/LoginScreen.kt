@@ -1,4 +1,4 @@
-package org.example.project.ui.screens
+package ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,9 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.BgColor
-import org.example.project.ui.theme.PrimaryColor
+import ui.theme.AccentColor
+import ui.theme.BgColor
+import ui.theme.PrimaryColor
 
 @Composable
 fun LoginScreen(onLogin: (String) -> Unit) {

@@ -1,5 +1,3 @@
-package org.example.project
-
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
@@ -10,13 +8,13 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import org.example.project.model.PasswordEntry
-import org.example.project.model.ScreenState
-import org.example.project.ui.screens.DashboardScreen
-import org.example.project.ui.screens.LoginScreen
-import org.example.project.ui.theme.BgColor
-import org.example.project.ui.theme.PrimaryColor
-import org.example.project.utils.SecurityUtils
+import model.PasswordEntry
+import model.ScreenState
+import ui.screens.DashboardScreen
+import ui.screens.LoginScreen
+import ui.theme.BgColor
+import ui.theme.PrimaryColor
+import utils.SecurityUtils
 
 fun main() = application {
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp, position = WindowPosition(Alignment.Center))

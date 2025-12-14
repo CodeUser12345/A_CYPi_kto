@@ -1,4 +1,4 @@
-package org.example.project.ui.dialogs
+package ui.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,15 +21,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.example.project.model.PasswordEntry
-import org.example.project.ui.components.CheckOption
-import org.example.project.ui.components.InputLabel
-import org.example.project.ui.components.SimpleInput
-import org.example.project.ui.components.TabButton
-import org.example.project.ui.components.TagChip
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.PrimaryColor
-import org.example.project.utils.SecurityUtils
+import model.PasswordEntry
+import ui.components.CheckOption
+import ui.components.InputLabel
+import ui.components.SimpleInput
+import ui.components.TabButton
+import ui.components.TagChip
+import ui.theme.AccentColor
+import ui.theme.PrimaryColor
+import utils.SecurityUtils
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

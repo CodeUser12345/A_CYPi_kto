@@ -1,4 +1,4 @@
-package org.example.project.utils
+package utils
 
 import java.security.MessageDigest
 import java.util.Base64

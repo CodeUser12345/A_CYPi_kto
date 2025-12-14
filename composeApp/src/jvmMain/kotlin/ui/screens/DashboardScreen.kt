@@ -1,4 +1,4 @@
-package org.example.project.ui.screens
+package ui.screens
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.foundation.BorderStroke
@@ -38,19 +38,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.example.project.model.PasswordEntry
-import org.example.project.ui.components.PasswordCard
-import org.example.project.ui.components.SidebarItem
-import org.example.project.ui.components.TagChip
-import org.example.project.ui.dialogs.FolderDialog
-import org.example.project.ui.dialogs.PasswordDialog
-import org.example.project.ui.dialogs.ImportExportDialog
-import org.example.project.ui.theme.AccentColor
-import org.example.project.ui.theme.BgColor
-import org.example.project.ui.theme.PrimaryColor
-import org.example.project.ui.theme.TextColor
-import org.example.project.ui.theme.WeakColor
-import org.example.project.utils.SecurityUtils
+import model.PasswordEntry
+import ui.components.PasswordCard
+import ui.components.SidebarItem
+import ui.components.TagChip
+import ui.dialogs.FolderDialog
+import ui.dialogs.PasswordDialog
+import ui.dialogs.ImportExportDialog
+import ui.theme.AccentColor
+import ui.theme.BgColor
+import ui.theme.PrimaryColor
+import ui.theme.TextColor
+import ui.theme.WeakColor
+import utils.SecurityUtils
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalComposeUiApi::class)
 @Composable

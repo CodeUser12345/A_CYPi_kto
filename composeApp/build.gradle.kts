@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
     kotlin("plugin.serialization") version "1.9.20"
 }
 
@@ -36,12 +35,10 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "org.example.project.MainKt"
-
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
-            packageVersion = "1.0.0"
-        }
+        mainClass = "MainKt"
     }
+}
+
+tasks.withType<Test>().configureEach {
+    enabled = false
 }

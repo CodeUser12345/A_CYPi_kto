@@ -1,4 +1,4 @@
-package org.example.project.model
+package model
 
 import kotlinx.serialization.Serializable
 import java.util.UUID

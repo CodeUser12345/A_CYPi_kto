@@ -1,4 +1,4 @@
-package org.example.project.ui.dialogs
+package ui.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,8 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.example.project.ui.components.SimpleInput
-import org.example.project.ui.theme.PrimaryColor
+import ui.components.SimpleInput
+import ui.theme.PrimaryColor
 
 @Composable
 fun FolderDialog(
