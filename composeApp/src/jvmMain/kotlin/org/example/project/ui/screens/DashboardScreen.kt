@@ -229,7 +229,7 @@ fun DashboardScreen(
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Warning, null, tint = WeakColor, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Обнаружено слабых паролей.", fontSize = 12.sp, color = WeakColor, lineHeight = 14.sp)
+                            Text("Обнаружены слабые пароли.", fontSize = 12.sp, color = WeakColor, lineHeight = 14.sp)
                         }
                     }
                 }
