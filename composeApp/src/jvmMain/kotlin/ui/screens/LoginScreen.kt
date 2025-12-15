@@ -22,8 +22,8 @@ import utils.SecurityUtils
 /**
  * Экран авторизации пользователя.
  * Обрабатывает два сценария:
- * 1. Первый запуск: Создание и сохранение нового мастер-пароля.
- * 2. Обычный вход: Проверка введенного пароля с сохраненным хешем.
+ * 1. Первый запуск: Создание и сохранение нового мастер-пароля (с проверкой длины).
+ * 2. Обычный вход: Проверка введенного пароля с сохраненным хешем (без проверки длины).
  *
  * @param masterPasswordHash Сохраненный хеш пароля (null при первом запуске).
  * @param masterPasswordSalt Сохраненная соль (null при первом запуске).
@@ -133,14 +133,20 @@ private fun handleLogin(
     onFirstSetup: (String) -> Unit,
     onError: (String) -> Unit
 ) {
-    if (password.length < 8) {
-        onError("Пароль должен быть не менее 8 символов")
-        return
-    }
-
     if (isFirstTime) {
+        // Проверка длины ТОЛЬКО при создании нового пароля
+        if (password.length < 8) {
+            onError("Пароль должен быть не менее 8 символов")
+            return
+        }
         onFirstSetup(password)
     } else {
+        // При входе проверяем только совпадение хеша, независимо от длины
+        if (password.isEmpty()) {
+            onError("Введите пароль")
+            return
+        }
+
         if (SecurityUtils.verifyPassword(password, masterPasswordHash!!, masterPasswordSalt!!)) {
             onLogin(password)
         } else {
